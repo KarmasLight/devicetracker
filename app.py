@@ -375,13 +375,22 @@ def check_in():
 
     if request.method == 'POST':
         barcode = request.form.get('barcode', '').strip()
-        logging.info('POST barcode: %s', barcode)
+        attendee_name = request.form.get('attendee_name', '').strip()
+        logging.info('POST barcode: %s, attendee_name: %s', barcode, attendee_name)
 
+        # Validate barcode
         if not barcode:
             flash('Please enter a barcode', 'error')
             conn.close()
             logging.warning('Barcode missing on POST')
-            return redirect(url_for('check_in'))
+            return render_template('check_in.html', barcode=barcode, attendee_name=attendee_name)
+
+        # Validate attendee name
+        if not attendee_name:
+            flash('Please enter the attendee name', 'error')
+            conn.close()
+            logging.warning('Attendee name missing on POST')
+            return render_template('check_in.html', barcode=barcode, attendee_name=attendee_name)
 
         try:
             barcode = barcode.strip()

@@ -41,6 +41,14 @@
                             Please enter a barcode.
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label for="attendee_name" class="form-label">Attendee Name <span class="text-danger">*</span> <span class="text-muted small">required</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="attendee_name" name="attendee_name" required value="{{ attendee_name|default('') }}">
+                        </div>
+                        <div class="invalid-feedback">Please enter the attendee's name.</div>
+                    </div>
                 </form>
                 
                 <!-- Status indicator -->
@@ -121,24 +129,31 @@
     form.addEventListener('submit', function(event) {
         event.preventDefault();
         event.stopPropagation();
-        
+
         barcodeInput.value = barcodeInput.value.trim();
         const barcode = barcodeInput.value;
-        
+        const attendeeNameInput = document.getElementById('attendee_name');
+        const attendeeName = attendeeNameInput ? attendeeNameInput.value.trim() : '';
+
         // Basic validation
         if (!barcode) {
             showStatus('Please enter a barcode', true);
             barcodeInput.focus();
             return;
         }
-        
+        if (!attendeeName) {
+            showStatus("Please enter the attendee's name", true);
+            attendeeNameInput.focus();
+            return;
+        }
+
         // Show processing state
-        showStatus('Processing barcode...');
-        
+        showStatus('Processing check-in...');
+
         // Disable form during submission
         const submitButton = form.querySelector('button[type="submit"]');
         if (submitButton) submitButton.disabled = true;
-        
+
         // Submit form the traditional way
         form.submit();
     });
