@@ -144,11 +144,10 @@
         this.select();
     });
     
-    // Handle barcode scanner input (submit on Enter)
+    // Prevent Enter key from submitting the form in the barcode input
     barcodeInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
-            e.preventDefault();
-            form.dispatchEvent(new Event('submit'));
+            e.preventDefault(); // Do nothing, require explicit button click
         }
     });
 })();
