@@ -122,7 +122,8 @@
         event.preventDefault();
         event.stopPropagation();
         
-        const barcode = barcodeInput.value.trim();
+        barcodeInput.value = barcodeInput.value.trim();
+        const barcode = barcodeInput.value;
         
         // Basic validation
         if (!barcode) {
