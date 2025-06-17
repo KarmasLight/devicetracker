@@ -445,7 +445,7 @@ def clear_devices():
     admin_password = request.form.get('admin_password', '')
     # TODO: Move this to config or env variable for production
     CORRECT_PASSWORD = 'admin123'
-{{ ... }}
+    if admin_password != CORRECT_PASSWORD:
         flash('Incorrect admin password. Device list was not cleared.', 'error')
         return redirect(url_for('devices'))
 
