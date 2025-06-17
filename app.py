@@ -356,23 +356,32 @@ def check_out():
 @app.route('/check_in', methods=['GET', 'POST'])
 @login_required
 def check_in():
+    # Get counts for header/status (will be used in both GET and POST)
+    conn = get_db_connection()
+    total_devices = conn.execute('SELECT COUNT(*) FROM devices').fetchone()[0]
+    checked_out = conn.execute(
+        'SELECT COUNT(*) FROM devices WHERE check_out_time IS NOT NULL AND check_in_time IS NULL'
+    ).fetchone()[0]
+    checked_in = total_devices - checked_out
+    
     if request.method == 'POST':
         barcode = request.form.get('barcode', '').strip()
         
         if not barcode:
             flash('Please enter a barcode', 'error')
-            # Render the form with the barcode value preserved
-            return render_template('check_in.html', barcode=barcode)
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
+            conn.close()
+            return render_template('check_in.html', 
+                               barcode=barcode,
+                               checked_in=checked_in,
+                               checked_out=checked_out,
+                               total=total_devices)
         
         try:
             # Clean the barcode (remove any whitespace or newlines that might be added by the scanner)
             barcode = barcode.strip()
             
             # Check if device exists and is checked out
-            device = cursor.execute('''
+            device = conn.execute('''
                 SELECT * FROM devices 
                 WHERE barcode = ? AND check_out_time IS NOT NULL AND check_in_time IS NULL
             ''', (barcode,)).fetchone()
@@ -384,14 +393,14 @@ def check_in():
             
             # Update check-in time
             current_time = datetime.now(pytz.utc).isoformat()
-            cursor.execute('''
+            conn.execute('''
                 UPDATE devices 
                 SET check_in_time = ?
                 WHERE barcode = ?
             ''', (current_time, barcode))
             
             # Log the check-in
-            cursor.execute('''
+            conn.execute('''
                 INSERT INTO audit_log (timestamp, action, barcode, details)
                 VALUES (?, ?, ?, ?)
             ''', (current_time, 'check_in', barcode, 
@@ -399,46 +408,45 @@ def check_in():
             
             conn.commit()
             
-            # Get device details for success message
-            device = cursor.execute('SELECT * FROM devices WHERE barcode = ?', (barcode,)).fetchone()
-            flash(
-                f'Device {barcode} checked in successfully! '
-                f'Checked out to {device["attendee_name"]} ({device["email"]})', 
-                'success'
-            )
-            # Get counts for header/status
-            total_devices = cursor.execute('SELECT COUNT(*) FROM devices').fetchone()[0]
-            checked_out = cursor.execute(
+            # Get updated device details for success message
+            device = conn.execute('SELECT * FROM devices WHERE barcode = ?', (barcode,)).fetchone()
+            
+            # Get updated counts after check-in
+            total_devices = conn.execute('SELECT COUNT(*) FROM devices').fetchone()[0]
+            checked_out = conn.execute(
                 'SELECT COUNT(*) FROM devices WHERE check_out_time IS NOT NULL AND check_in_time IS NULL'
             ).fetchone()[0]
             checked_in = total_devices - checked_out
+            
+            flash(
+                f'Device {barcode} checked in successfully! ' \
+                f'Checked out to {device["attendee_name"]} ({device["email"]})', 
+                'success'
+            )
+            
             return render_template(
                 'check_in.html',
                 checked_in=checked_in,
                 checked_out=checked_out,
                 total=total_devices,
-                checked_in_device=device
+                checked_in_device=dict(device)  # Convert Row to dict for template
             )
             
         except Exception as e:
             conn.rollback()
             flash(f'An error occurred: {str(e)}', 'error')
-            # Render the form with the barcode value preserved
-            return render_template('check_in.html', barcode=barcode)
+            return render_template('check_in.html', 
+                               barcode=barcode,
+                               checked_in=checked_in,
+                               checked_out=checked_out,
+                               total=total_devices)
             
-        finally:
-            conn.close()
-    
-    # For GET request, show the check in form
-    # Get counts
-    conn = get_db_connection()
-    total_devices = conn.execute('SELECT COUNT(*) FROM devices').fetchone()[0]
-    checked_out = conn.execute(
-        'SELECT COUNT(*) FROM devices WHERE check_out_time IS NOT NULL AND check_in_time IS NULL'
-    ).fetchone()[0]
-    checked_in = total_devices - checked_out
+    # For GET request, show the check in form with current counts
     conn.close()
-    return render_template('check_in.html', checked_in=checked_in, checked_out=checked_out, total=total_devices, barcode=locals().get('barcode', ''))
+    return render_template('check_in.html',
+                         checked_in=checked_in,
+                         checked_out=checked_out,
+                         total=total_devices)
 
 @app.route('/clear_devices', methods=['POST'])
 @login_required
