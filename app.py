@@ -406,7 +406,19 @@ def check_in():
                 f'Checked out to {device["attendee_name"]} ({device["email"]})', 
                 'success'
             )
-            return redirect(url_for('check_in'))
+            # Get counts for header/status
+            total_devices = cursor.execute('SELECT COUNT(*) FROM devices').fetchone()[0]
+            checked_out = cursor.execute(
+                'SELECT COUNT(*) FROM devices WHERE check_out_time IS NOT NULL AND check_in_time IS NULL'
+            ).fetchone()[0]
+            checked_in = total_devices - checked_out
+            return render_template(
+                'check_in.html',
+                checked_in=checked_in,
+                checked_out=checked_out,
+                total=total_devices,
+                checked_in_device=device
+            )
             
         except Exception as e:
             conn.rollback()
