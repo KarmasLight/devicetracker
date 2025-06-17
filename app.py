@@ -12,6 +12,13 @@ from country_codes import COUNTRIES
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in production
 
+# Ensure session cookies work over HTTPS
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 # ---- Authentication ----
 
 # Hardcoded user for demo
