@@ -1,20 +1,29 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, make_response, session
 import sqlite3
 from datetime import datetime
 import pytz
-import os
 import csv
 from io import StringIO
 from datetime import datetime as dt
 from functools import wraps
+from dotenv import load_dotenv
 from country_codes import COUNTRIES
 
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = 'Kangen2025!'  # Change this to a secure random key in production
+
+# Load secret key from environment variable
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-key-change-in-production')
 
 # Ensure session cookies work over HTTPS
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Database configuration
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///headset_tracking.db')
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
