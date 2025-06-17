@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h2 class="mb-4">Check Out Device</h2>
+        <div class="card mb-4">
+            <div class="card-body">
+                <form id="checkoutForm" method="POST" action="{{ url_for('check_out') }}" class="needs-validation">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+                    <!-- Barcode Row -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="barcode" class="form-label">Barcode <span class="text-danger">*</span> <span class="text-muted small">required</span></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                                <input type="text" class="form-control form-control-lg" id="barcode" name="barcode" 
+                                       placeholder="Scan barcode here" required autofocus autocomplete="off"
+                                       onfocus="this.select()" aria-describedby="barcodeHelp"
+                                       value="{{ barcode|default('') }}">
+                            </div>
+                            <div id="barcodeHelp" class="form-text">Scan a barcode or enter it manually</div>{% if errors and errors.barcode %}<div class="text-danger small mt-1">{{ errors.barcode }}</div>{% endif %}<div class="invalid-feedback">Please enter a barcode.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendee Info Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="attendee_name" class="form-label">Attendee Name <span class="text-danger">*</span> <span class="text-muted small">required</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" id="attendee_name" name="attendee_name" required value="{{ attendee_name|default('') }}">
+                            </div>{% if errors and errors.attendee_name %}<div class="text-danger small mt-1">{{ errors.attendee_name }}</div>{% endif %}<div class="invalid-feedback">Please enter the attendee's name.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span> <span class="text-muted small">required</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                <input type="email" class="form-control" id="email" name="email" required value="{{ email|default('') }}">
+                            </div>{% if errors and errors.email %}<div class="text-danger small mt-1">{{ errors.email }}</div>{% endif %}<div class="invalid-feedback">Please enter a valid email address.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Info Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone <span class="text-danger">*</span> <span class="text-muted small">required</span></label>
+<div class="input-group">
+    <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+    <select class="form-select" id="country_code" name="country_code" style="max-width: 8em;">
+        {% for c in countries %}
+            <option value="{{ c.code }}" {% if country_code|default('+1') == c.code %}selected{% endif %}>{{ c.name }} ({{ c.code }})</option>
+        {% endfor %}
+    </select>
+    <input type="tel" class="form-control" id="phone" name="phone" placeholder="555-555-5555" value="{{ phone|default('') }}" required>
+</div>{% if errors and errors.phone %}<div class="text-danger small mt-1">{{ errors.phone }}</div>{% endif %}<div class="form-text">Select country and enter phone (numbers only)</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const country = document.getElementById('country_code');
+        const phone = document.getElementById('phone');
+        // On submit, prepend country code if not already present
+        document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+            if (country && phone && phone.value && !phone.value.startsWith(country.value)) {
+                phone.value = country.value + phone.value.replace(/^\+/, '');
+            }
+        });
+    });
+</script>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="notes" class="form-label">Notes</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                                <textarea class="form-control" id="notes" name="notes" rows="1" placeholder="Optional notes"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <button type="reset" class="btn btn-outline-secondary me-2" id="clearButton">
+                            <i class="bi bi-x-circle me-1"></i> Clear
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="submitButton" disabled>
+                            <i class="bi bi-box-arrow-right me-1"></i> Check Out
+                        </button>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('checkoutForm');
+        const submitBtn = document.getElementById('submitButton');
+        const requiredFields = [
+            document.getElementById('barcode'),
+            document.getElementById('attendee_name'),
+            document.getElementById('email'),
+            document.getElementById('phone')
+        ];
+        function checkFields() {
+            const allFilled = requiredFields.every(input => input && input.value.trim() !== '');
+            submitBtn.disabled = !allFilled;
+        }
+        requiredFields.forEach(input => {
+            if (input) {
+                input.addEventListener('input', checkFields);
+            }
+        });
+        checkFields();
+    });
+</script>
+                    </div>
+                </form>
+                
+                <!-- Status indicator -->
+                <div id="scanStatus" class="d-none mt-3">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status" id="scanSpinner">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <span id="statusMessage">Processing barcode...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if checked_out_device %}
+<div class="row mt-4">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Device Checked Out</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Barcode:</strong> {{ checked_out_device.barcode }}</p>
+                <p><strong>Attendee:</strong> {{ checked_out_device.attendee_name }}</p>
+                <p><strong>Email:</strong> {{ checked_out_device.email }}</p>
+                {% if checked_out_device.phone %}
+                <p><strong>Phone:</strong> {{ checked_out_device.phone }}</p>
+                {% endif %}
+                <p><strong>Checked Out:</strong> {{ checked_out_device.check_out_time|format_datetime }}</p>
+                <p><strong>Notes:</strong> {{ checked_out_device.notes or 'None' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form handling for barcode scanning
+(function() {
+    'use strict';
+    
+    const form = document.getElementById('checkoutForm');
+    const barcodeInput = document.getElementById('barcode');
+    const attendeeNameInput = document.getElementById('attendee_name');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
+    const statusDiv = document.getElementById('scanStatus');
+    const statusMessage = document.getElementById('statusMessage');
+    const spinner = document.getElementById('scanSpinner');
+    
+    if (!form || !barcodeInput) return;
+    
+    // Format phone number as user types
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+            e.target.value = !x[2] ? x[1] : x[1] + '-' + x[2] + (x[3] ? '-' + x[3] : '');
+        });
+    }
+    
+    // Show status message
+    function showStatus(message, isError = false) {
+        if (!statusMessage || !statusDiv) return;
+        
+        statusMessage.textContent = message;
+        statusDiv.classList.remove('d-none');
+        
+        if (spinner) {
+            spinner.classList.toggle('d-none', isError);
+        }
+        
+        if (isError) {
+            statusDiv.classList.add('text-danger');
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                statusDiv.classList.add('d-none');
+            }, 5000);
+        } else {
+            statusDiv.classList.remove('text-danger');
+        }
+    }
+    
+    // Handle form submission
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Basic validation
+        if (!barcodeInput.value.trim()) {
+            showStatus('Please enter a barcode', true);
+            barcodeInput.focus();
+            return;
+        }
+        
+        if (!attendeeNameInput || !attendeeNameInput.value.trim()) {
+            showStatus('Please enter attendee name', true);
+            if (attendeeNameInput) attendeeNameInput.focus();
+            return;
+        }
+        
+        if (!emailInput || !emailInput.value.trim()) {
+            showStatus('Please enter an email address', true);
+            if (emailInput) emailInput.focus();
+            return;
+        }
+        
+        // Show processing state
+        showStatus('Processing checkout...');
+        
+        // Disable form during submission
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+        
+        // Submit form the traditional way
+        form.submit();
+    });
+    
+    // Focus on barcode input when page loads
+    barcodeInput.focus();
+    
+    // Handle barcode scanner input (move to next field on Enter)
+    barcodeInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (attendeeNameInput) {
+                attendeeNameInput.focus();
+            } else if (emailInput) {
+                emailInput.focus();
+            } else {
+                form.dispatchEvent(new Event('submit'));
+            }
+        }
+    });
+    
+    // Handle Enter key in other fields to move to next field or submit
+    [attendeeNameInput, emailInput, phoneInput].forEach(input => {
+        if (input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const formElements = Array.from(form.elements);
+                    const currentIndex = formElements.indexOf(e.target);
+                    
+                    if (currentIndex < formElements.length - 1) {
+                        formElements[currentIndex + 1].focus();
+                    } else {
+                        form.dispatchEvent(new Event('submit'));
+                    }
+                }
+            });
+        }
+    });
+    
+    // Auto-select barcode text when clicking the field
+    barcodeInput.addEventListener('click', function() {
+        this.select();
+    });
+    
+    // Clear button functionality
+    const clearButton = form.querySelector('button[type="reset"]');
+    if (clearButton) {
+        clearButton.addEventListener('click', function() {
+            form.reset();
+            form.classList.remove('was-validated');
+            barcodeInput.focus();
+            // Hide any status messages
+            if (statusDiv) statusDiv.classList.add('d-none');
+        });
+    }
+})();
+</script>
+{% endblock %}

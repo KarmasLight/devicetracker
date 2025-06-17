@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h2 class="mb-4">Check In Device</h2>
+        <div class="card mb-4">
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mb-3">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+<form id="checkinForm" method="POST" action="{{ url_for('check_in') }}" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="barcode" class="form-label">Barcode *</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                            <input type="text" class="form-control form-control-lg" id="barcode" name="barcode" 
+                                   placeholder="Scan barcode" required aria-describedby="barcodeHelp" 
+                                   autocomplete="off" maxlength="32"
+                                   value="{{ barcode|default('') }}">
+                            <button class="btn btn-primary" type="submit" id="checkinButton">
+                                <i class="bi bi-check-circle me-1"></i> Check In
+                            </button>
+                        </div>
+                        <div id="barcodeHelp" class="form-text">Scan a barcode or enter it manually and press Enter/Check In</div>
+                        <div class="invalid-feedback">
+                            Please enter a barcode.
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Status indicator -->
+                <div id="scanStatus" class="d-none mt-3">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status" id="scanSpinner">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <span id="statusMessage">Processing barcode...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if checked_in_device %}
+<div class="row mt-4">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Device Checked In</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Barcode:</strong> {{ checked_in_device.barcode }}</p>
+                <p><strong>Attendee:</strong> {{ checked_in_device.attendee_name }}</p>
+                <p><strong>Email:</strong> {{ checked_in_device.email }}</p>
+                {% if checked_in_device.phone %}
+                <p><strong>Phone:</strong> {{ checked_in_device.phone }}</p>
+                {% endif %}
+                <p><strong>Checked Out:</strong> {{ checked_in_device.check_out_time|format_datetime }}</p>
+                <p><strong>Checked In:</strong> {{ checked_in_device.check_in_time|format_datetime }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form handling for barcode scanning
+(function() {
+    'use strict';
+    
+    const form = document.getElementById('checkinForm');
+    const barcodeInput = document.getElementById('barcode');
+    const statusDiv = document.getElementById('scanStatus');
+    const statusMessage = document.getElementById('statusMessage');
+    const spinner = document.getElementById('scanSpinner');
+    
+    if (!form || !barcodeInput) return;
+    
+    // Show status message
+    function showStatus(message, isError = false) {
+        if (!statusMessage || !statusDiv) return;
+        
+        statusMessage.textContent = message;
+        statusDiv.classList.remove('d-none');
+        
+        if (spinner) {
+            spinner.classList.toggle('d-none', isError);
+        }
+        
+        if (isError) {
+            statusDiv.classList.add('text-danger');
+            // Auto-hide error after 5 seconds
+            setTimeout(() => {
+                statusDiv.classList.add('d-none');
+            }, 5000);
+        } else {
+            statusDiv.classList.remove('text-danger');
+        }
+    }
+    
+    // Handle form submission
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const barcode = barcodeInput.value.trim();
+        
+        // Basic validation
+        if (!barcode) {
+            showStatus('Please enter a barcode', true);
+            barcodeInput.focus();
+            return;
+        }
+        
+        // Show processing state
+        showStatus('Processing barcode...');
+        
+        // Disable form during submission
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+        
+        // Submit form the traditional way
+        form.submit();
+    });
+    
+    // Focus on barcode input when page loads
+    barcodeInput.focus();
+    
+    // Auto-select barcode text when clicking the field
+    barcodeInput.addEventListener('click', function() {
+        this.select();
+    });
+    
+    // Handle barcode scanner input (submit on Enter)
+    barcodeInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            form.dispatchEvent(new Event('submit'));
+        }
+    });
+})();
+</script>
+{% endblock %}

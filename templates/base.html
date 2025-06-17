@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .status-badge {
+            font-size: 1.2rem;
+            padding: 0.5rem 1rem;
+            margin: 0 0.5rem;
+        }
+        .status-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 1rem;
+        }
+        .status-label {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .status-checked-in {
+            color: #198754;
+        }
+        .status-checked-out {
+            color: #dc3545;
+        }
+        .status-total {
+            color: #0d6efd;
+        }
+        .nav-tabs {
+            margin-bottom: 1.5rem;
+        }
+        .alert {
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .search-box {
+            margin-bottom: 1.5rem;
+        }
+        .export-btn {
+            margin-bottom: 1.5rem;
+        }
+        .status-message {
+            display: inline-block;
+            margin-left: 1rem;
+            font-size: 1.2rem;
+            vertical-align: middle;
+        }
+        .status-message.error {
+            color: #dc3545;
+        }
+        .status-message.success {
+            color: #198754;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center">
+                <img src="{{ url_for('static', filename='Enagic-Logo.png') }}" alt="Enagic Logo" style="max-height: 80px; margin-bottom: 1rem;">
+                <h1 class="mb-4">Device Tracker</h1>
+            </div>
+        </div>
+
+        <!-- Status Counters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="status-container">
+                    <div class="status-item">
+                        <span class="status-label">Checked In</span>
+                        <span class="status-value status-checked-in">{{ checked_in|default(0) }}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Checked Out</span>
+                        <span class="status-value status-checked-out">{{ checked_out|default(0) }}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Total Devices</span>
+                        <span class="status-value status-total">{{ total|default(0) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_tab == 'check_out' else '' }}" 
+                   href="{{ url_for('check_out') }}">Check Out</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_tab == 'check_in' else '' }}" 
+                   href="{{ url_for('check_in') }}">Check In</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if active_tab == 'devices' else '' }}" 
+                   href="{{ url_for('devices') }}">Device List</a>
+            </li>
+            {% if session.logged_in %}
+            <li class="nav-item ms-auto">
+                <a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <!-- Main Content -->
+        <div class="mt-4">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Auto-focus the first input field in forms
+        document.addEventListener('DOMContentLoaded', function() {
+            // Focus on the first barcode input if it exists, otherwise first input
+            let barcodeInput = document.querySelector('input[name="barcode"]');
+            if (barcodeInput) {
+                barcodeInput.focus();
+            } else {
+                const firstInput = document.querySelector('form input[type="text"], form input[type="email"], form input[type="tel"]');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }
+            
+            // Auto-hide flash messages after 5 seconds
+            const flashMessages = document.querySelectorAll('.alert-dismissible');
+            flashMessages.forEach(message => {
+                setTimeout(() => {
+                    message.style.transition = 'opacity 0.5s';
+                    message.style.opacity = '0';
+                    setTimeout(() => message.remove(), 500);
+                }, 5000);
+            });
+            
+            // Handle barcode scanner input (keyup event for better compatibility)
+            document.addEventListener('keyup', function(e) {
+                // Check if the pressed key is Enter (key code 13)
+                if (e.key === 'Enter' || e.keyCode === 13) {
+                    // Get the currently focused element
+                    const activeElement = document.activeElement;
+                    
+                    // If the focused element is a barcode input
+                    if (activeElement && activeElement.name === 'barcode') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Add a small delay to ensure the barcode is fully captured
+                        setTimeout(() => {
+                            const form = activeElement.closest('form');
+                            if (form && form.checkValidity()) {
+                                form.submit();
+                            } else if (form) {
+                                // Show validation message if form is invalid
+                                form.classList.add('was-validated');
+                                activeElement.focus();
+                            }
+                        }, 50);
+                    }
+                }
+            });
+            
+            // Prevent form submission on Enter key in other fields
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.name !== 'barcode') {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
