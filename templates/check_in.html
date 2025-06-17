@@ -6,7 +6,14 @@
         <h2 class="mb-4">Check In Device</h2>
         <div class="card mb-4">
             <div class="card-body">
-                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if status_msg %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ status_msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+{% endif %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         {% for category, message in messages %}
             <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">

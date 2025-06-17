@@ -10,7 +10,7 @@ from functools import wraps
 from country_codes import COUNTRIES
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this to a secure random key in production
+app.secret_key = 'Kangen2025!'  # Change this to a secure random key in production
 
 # Ensure session cookies work over HTTPS
 app.config['SESSION_COOKIE_SECURE'] = True
@@ -417,14 +417,10 @@ def check_in():
             ).fetchone()[0]
             checked_in = total_devices - checked_out
 
-            flash(
-                f'Device {barcode} checked in successfully! '
-                f'Checked out to {device["attendee_name"]} ({device["email"]})', 
-                'success'
-            )
-            session['checked_in_barcode'] = barcode
+            from urllib.parse import quote
+            status_msg = f"Device {barcode} checked in successfully! Checked out to {device['attendee_name']} ({device['email']})"
             logging.info('Check-in success for barcode: %s', barcode)
-            return redirect(url_for('check_in'))
+            return redirect(url_for('check_in', status=quote(status_msg)))
         except Exception as e:
             conn.rollback()
             logging.exception('Error during check-in')
@@ -432,19 +428,17 @@ def check_in():
             return redirect(url_for('check_in'))
 
     checked_in_device = None
-    barcode = ''
-    if 'checked_in_barcode' in session:
-        barcode = session.pop('checked_in_barcode')
-        device = conn.execute('SELECT * FROM devices WHERE barcode = ?', (barcode,)).fetchone()
-        if device:
-            checked_in_device = dict(device)
-            logging.info('Displaying checked-in device info for barcode: %s', barcode)
+    from urllib.parse import unquote
+    status_msg = request.args.get('status')
+    if status_msg:
+        status_msg = unquote(status_msg)
     conn.close()
     return render_template('check_in.html',
                          checked_in=checked_in,
                          checked_out=checked_out,
                          total=total_devices,
-                         checked_in_device=checked_in_device)
+                         checked_in_device=checked_in_device,
+                         status_msg=status_msg)
 
 @app.route('/clear_devices', methods=['POST'])
 @login_required
