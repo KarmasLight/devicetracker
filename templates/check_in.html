@@ -151,10 +151,11 @@
         this.select();
     });
     
-    // Prevent Enter key from submitting the form in the barcode input
+    // Prevent Enter key from submitting the form in the barcode input (scanner or manual)
     barcodeInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault(); // Do nothing, require explicit button click
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault(); // Block Enter key from submitting
+            // Optionally: show a tooltip or highlight the Check In button
         }
     });
 })();
